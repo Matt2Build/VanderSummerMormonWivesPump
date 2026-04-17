@@ -2,150 +2,139 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { SHOWS, getAllXHandles, ShowId } from '@/lib/castDatabase'
+import { Heart, MessageCircle, Share2, Verified, ExternalLink } from 'lucide-react'
 
 interface Post {
   id: string
-  platform: 'x' | 'youtube'
+  platform: 'x' | 'instagram' | 'tiktok'
   author: string
   authorHandle: string
   authorImage?: string
+  isVerified: boolean
   content: string
   timestamp: string
-  engagement: number
+  likes: number
+  comments: number
+  shares: number
   mediaUrl?: string
   url: string
   showId?: string
+  liked?: boolean
+  saved?: boolean
 }
 
-// Mock posts representing what we'd get from X API
 const MOCK_POSTS: Post[] = [
   {
     id: '1',
     platform: 'x',
     author: 'Lisa Vanderpump',
     authorHandle: 'LisaVanderpump',
-    content: 'The reunion was… revealing 💎 Not everyone can handle the truth.',
+    isVerified: true,
+    content: 'The reunion was… quite revealing I must say 💎 Not everyone handles the truth with grace. #PumpRules',
     timestamp: '2h ago',
-    engagement: 15420,
+    likes: 15420,
+    comments: 342,
+    shares: 1205,
     url: 'https://x.com/LisaVanderpump/status/1',
     showId: 'vpr'
   },
   {
     id: '2',
-    platform: 'x',
-    author: 'Tom Sandoval',
-    authorHandle: 'TomSandoval',
-    content: 'Sometimes you have to choose yourself.',
+    platform: 'instagram',
+    author: 'Kyle Cooke',
+    authorHandle: 'kylecooke',
+    isVerified: true,
+    content: 'Summer in the Hamptons hits different this year 🔥 @SummerHouse tonight at 9/8c!',
     timestamp: '4h ago',
-    engagement: 8932,
-    url: 'https://x.com/TomSandoval/status/2',
-    showId: 'vpr'
+    likes: 8932,
+    comments: 456,
+    shares: 234,
+    url: 'https://instagram.com/p/123',
+    showId: 'poll'
   },
   {
     id: '3',
     platform: 'x',
-    author: 'Kyle Cooke',
-    authorHandle: 'imkylecooke',
-    content: 'Summer is coming… and so is the drama 🔥 @SummerHouse',
-    timestamp: '5h ago',
-    engagement: 5431,
-    url: 'https://x.com/imkylecooke/status/3',
-    showId: 'poll'
-  },
-  {
-    id: '4',
-    platform: 'x',
-    author: 'Lindsay Hubbard',
-    authorHandle: 'lindshubbs',
-    content: 'Healing is not linear. Thank you all for the love ❤️',
-    timestamp: '6h ago',
-    engagement: 12200,
-    url: 'https://x.com/lindshubbs/status/4',
-    showId: 'poll'
-  },
-  {
-    id: '5',
-    platform: 'x',
     author: 'Kyle Richards',
     authorHandle: 'KyleRichards',
-    content: 'Reunion ready 💅 See you tonight.',
-    timestamp: '8h ago',
-    engagement: 45600,
+    isVerified: true,
+    content: 'Reunion ready 💅 Sometimes you just have to show up and speak your truth. #RHOBH',
+    timestamp: '5h ago',
+    likes: 28932,
+    comments: 892,
+    shares: 3402,
     url: 'https://x.com/KyleRichards/status/5',
     showId: 'rhobh'
   },
   {
-    id: '6',
-    platform: 'x',
-    author: 'Dorit Kemsley',
-    authorHandle: 'doritkemsley',
-    content: 'The truth will set you free 🙏',
-    timestamp: '10h ago',
-    engagement: 8900,
-    url: 'https://x.com/doritkemsley/status/6',
-    showId: 'rhobh'
+    id: '4',
+    platform: 'instagram',
+    author: 'Shep Rose',
+    authorHandle: 'ShepRose',
+    isVerified: true,
+    content: 'Charleston nights hit different 🥃 #SouthernCharm',
+    timestamp: '6h ago',
+    likes: 5431,
+    comments: 234,
+    shares: 89,
+    url: 'https://instagram.com/p/456',
+    showId: 'southerncharm'
   },
   {
-    id: '7',
-    platform: 'youtube',
-    author: 'Bravo TV',
-    authorHandle: 'BravoTV',
-    content: 'NEW: Scandoval, one year later. Where are they now?',
-    timestamp: '12h ago',
-    engagement: 125000,
-    url: 'https://youtube.com/watch?v=123',
-  },
-  {
-    id: '8',
-    platform: 'x',
+    id: '5',
+    platform: 'tiktok',
     author: 'Miranda McVeigh',
-    authorHandle: 'miranda_mcveigh',
-    content: 'Not everyone\'s story is what it seems 🤐 #MormonWives',
+    authorHandle: 'miranda.mcveigh',
+    isVerified: false,
+    content: 'Not everything is what it seems on the outside 🤐 #MormonWives #SecretLives',
     timestamp: '3h ago',
-    engagement: 15600,
-    url: 'https://x.com/miranda_mcveigh/status/8',
+    likes: 15600,
+    comments: 1200,
+    shares: 3400,
+    url: 'https://tiktok.com/@miranda.mcveigh/video/123',
     showId: 'mormonwives'
   },
 ]
 
 export function DramaFeed() {
-  const [posts] = useState<Post[]>(MOCK_POSTS)
+  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS)
   const [loading, setLoading] = useState(true)
   const [selectedShows, setSelectedShows] = useState<Set<string>>(new Set())
-  const [sortBy, setSortBy] = useState<'recent' | 'engagement'>('recent')
+  const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent')
 
   useEffect(() => {
-    // Simulate fetching from X API
     setTimeout(() => setLoading(false), 800)
   }, [])
 
+  const handleLike = (postId: string) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId 
+        ? { ...post, liked: !post.liked, likes: post.liked ? post.likes - 1 : post.likes + 1 }
+        : post
+    ))
+  }
+
+  const handleSave = (postId: string) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, saved: !post.saved } : post
+    ))
+  }
+
   const filteredPosts = useMemo(() => {
     let filtered = posts
-    
-    // Filter by selected shows
     if (selectedShows.size > 0) {
-      filtered = filtered.filter(post => 
-        !post.showId || selectedShows.has(post.showId)
-      )
+      filtered = filtered.filter(post => !post.showId || selectedShows.has(post.showId))
     }
-    
-    // Sort
     return [...filtered].sort((a, b) => {
-      if (sortBy === 'engagement') return b.engagement - a.engagement
-      // Parse "2h ago", "4h ago" roughly
+      if (sortBy === 'trending') return (b.likes + b.comments * 2) - (a.likes + a.comments * 2)
       return posts.indexOf(a) - posts.indexOf(b)
     })
   }, [posts, selectedShows, sortBy])
 
-  const xHandles = getAllXHandles()
-
   const toggleShow = (showId: string) => {
     const newSet = new Set(selectedShows)
-    if (newSet.has(showId)) {
-      newSet.delete(showId)
-    } else {
-      newSet.add(showId)
-    }
+    if (newSet.has(showId)) newSet.delete(showId)
+    else newSet.add(showId)
     setSelectedShows(newSet)
   }
 
@@ -153,10 +142,15 @@ export function DramaFeed() {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-drama-gray rounded-lg p-4 animate-pulse">
-            <div className="h-4 bg-white/10 rounded w-1/4 mb-3"></div>
-            <div className="h-3 bg-white/10 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-white/10 rounded w-1/2"></div>
+          <div key={i} className="card-glamour p-5 animate-pulse">
+            <div className="flex gap-3">
+              <div className="w-12 h-12 rounded-full bg-gray-200"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -166,19 +160,19 @@ export function DramaFeed() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="bg-drama-gray rounded-lg p-3">
+      <div className="card-glamour p-4">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs text-gray-500 uppercase">Filter by show:</span>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter shows:</span>
           {SHOWS.map(show => (
             <button
               key={show.id}
               onClick={() => toggleShow(show.id)}
-              className={`px-2 py-1 text-xs rounded-full transition ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
                 selectedShows.has(show.id)
-                  ? 'bg-drama-red text-white'
-                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                  ? 'text-white shadow-md'
+                  : 'bg-white/50 text-gray-600 hover:bg-white'
               }`}
-              style={selectedShows.has(show.id) ? {} : { borderLeft: `3px solid ${show.color}` }}
+              style={selectedShows.has(show.id) ? { backgroundColor: show.color } : {}}
             >
               {show.name}
             </button>
@@ -186,73 +180,108 @@ export function DramaFeed() {
           {selectedShows.size > 0 && (
             <button
               onClick={() => setSelectedShows(new Set())}
-              className="text-xs text-gray-500 hover:text-white"
+              className="text-xs text-gray-400 hover:text-blush-500"
             >
               Clear
             </button>
           )}
         </div>
         
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-gray-500 uppercase">Sort:</span>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-gray-500 font-medium">Sort:</span>
           <button
             onClick={() => setSortBy('recent')}
-            className={`text-xs ${sortBy === 'recent' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`px-3 py-1 rounded-full transition-colors ${
+              sortBy === 'recent' ? 'bg-blush-100 text-blush-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
           >
-            Most Recent
+            Recent
           </button>
           <button
-            onClick={() => setSortBy('engagement')}
-            className={`text-xs ${sortBy === 'engagement' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            onClick={() => setSortBy('trending')}
+            className={`px-3 py-1 rounded-full transition-colors ${
+              sortBy === 'trending' ? 'bg-champagne-100 text-amber-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
           >
-            Most Engaging
+            🔥 Trending
           </button>
         </div>
-      </div>
-
-      {/* X Handles we're tracking */}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-        <span>Tracking {xHandles.length} cast accounts:</span>
-        <span className="line-clamp-1">@{xHandles.slice(0, 5).join(', ')}...</span>
       </div>
 
       {/* Posts */}
       <div className="space-y-4">
         {filteredPosts.map(post => {
           const show = SHOWS.find(s => s.id === post.showId)
+          const PlatformIcon = post.platform === 'x' ? (
+            <span className="font-bold text-sm">𝕏</span>
+          ) : post.platform === 'instagram' ? (
+            <span className="text-pink-500 font-bold">IG</span>
+          ) : (
+            <span className="text-black font-bold">TT</span>
+          )
+          
           return (
-            <article key={post.id} className="bg-drama-gray rounded-lg p-4 hover:bg-white/5 transition">
-              <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                  post.platform === 'x' ? 'bg-black border border-white/20' : 'bg-red-600'
-                }`}>
-                  {post.platform === 'x' ? 'X' : 'YT'}
+            <article key={post.id} className="card-glamour p-5 hover:scale-[1.01] transition-transform">
+              <div className="flex gap-4">
+                {/* Avatar */}
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blush-200 to-champagne-200 flex items-center justify-center text-lg font-bold text-blush-600">
+                    {post.author.charAt(0)}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center text-xs shadow-sm">
+                    {PlatformIcon}
+                  </div>
                 </div>
+                
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-semibold text-white">@{post.authorHandle}</span>
+                  {/* Header */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-semibold text-charcoal-900">{post.author}</span>
+                    {post.isVerified && <Verified className="w-4 h-4 text-blue-500" />}
+                    <span className="text-gray-400">@{post.authorHandle}</span>
                     {show && (
                       <span 
-                        className="text-[10px] px-1.5 py-0.5 rounded text-black font-medium"
+                        className="px-2 py-0.5 text-[10px] font-bold rounded-full text-white"
                         style={{ backgroundColor: show.color }}
                       >
                         {show.network}
                       </span>
                     )}
-                    <span className="text-xs text-gray-500">{post.timestamp}</span>
+                    <span className="text-gray-400 text-sm">{post.timestamp}</span>
                   </div>
-                  <p className="text-gray-300 text-sm leading-relaxed mb-3">{post.content}</p>
+                  
+                  {/* Content */}
+                  <p className="text-charcoal-800 text-sm leading-relaxed mb-3">{post.content}</p>
+                  
+                  {/* Media placeholder */}
                   {post.mediaUrl && (
-                    <div className="rounded-lg overflow-hidden mb-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={post.mediaUrl} alt="Post media" className="w-full max-h-64 object-cover" />
+                    <div className="rounded-xl overflow-hidden mb-3 bg-gray-100 aspect-video flex items-center justify-center">
+                      <span className="text-gray-400 text-sm">📸 Image/Video</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>♥ {post.engagement.toLocaleString()}</span>
-                    <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-drama-red hover:underline">
-                      View on {post.platform === 'x' ? 'X' : 'YouTube'}
-                    </a>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => handleLike(post.id)}
+                      className={`flex items-center gap-1.5 text-sm transition-colors ${
+                        post.liked ? 'text-blush-500' : 'text-gray-400 hover:text-blush-400'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${post.liked ? 'fill-current' : ''}`} />
+                      {post.likes.toLocaleString()}
+                    </button>
+                    <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-blue-400 transition-colors">
+                      <MessageCircle className="w-4 h-4" />
+                      {post.comments.toLocaleString()}
+                    </button>
+                    <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-green-400 transition-colors">
+                      <Share2 className="w-4 h-4" />
+                      {post.shares.toLocaleString()}
+                    </button>
+                    <button className="ml-auto flex items-center gap-1.5 text-sm text-gray-400 hover:text-charcoal-600 transition-colors">
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -261,7 +290,9 @@ export function DramaFeed() {
         })}
         
         {filteredPosts.length === 0 && (
-          <p className="text-center text-gray-500 py-8">No posts match your filters.</p>
+          <div className="card-glamour p-8 text-center">
+            <p className="text-gray-500">No tea spilling right now. Check back soon! ☕</p>
+          </div>
         )}
       </div>
     </div>

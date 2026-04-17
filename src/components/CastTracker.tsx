@@ -2,173 +2,262 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { CAST_DB, SHOWS, CastMember } from '@/lib/castDatabase'
+import { VERIFIED_HANDLES } from '@/lib/verifiedHandles'
+import { Heart, Link2, TrendingUp, Users, X, Filter, Search } from 'lucide-react'
 
 export function CastTracker() {
   const [cast, setCast] = useState<CastMember[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedShow, setSelectedShow] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'drama' | 'name' | 'show'>('drama')
+  const [sortBy, setSortBy] = useState<'drama' | 'name' | 'followers'>('drama')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setCast(CAST_DB)
   }, [])
 
+  const toggleFavorite = (id: string) => {
+    const newFavs = new Set(favorites)
+    if (newFavs.has(id)) newFavs.delete(id)
+    else newFavs.add(id)
+    setFavorites(newFavs)
+  }
+
   const filteredCast = useMemo(() => {
-    let filtered = selectedShow === 'all' ? cast : cast.filter(c => c.showId === selectedShow)
+    let filtered = cast
     
+    // Filter by show
+    if (selectedShow !== 'all') {
+      filtered = filtered.filter(c => c.showId === selectedShow)
+    }
+    
+    // Filter by search
+    if (searchQuery) {
+      filtered = filtered.filter(c => 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.show.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+    
+    // Sort
     return [...filtered].sort((a, b) => {
       if (sortBy === 'drama') return b.dramaScore - a.dramaScore
       if (sortBy === 'name') return a.name.localeCompare(b.name)
-      return a.show.localeCompare(b.show)
+      return 0
     })
-  }, [cast, selectedShow, sortBy])
+  }, [cast, selectedShow, searchQuery, sortBy])
 
   if (cast.length === 0) {
     return (
-      <div className="bg-drama-gray rounded-lg p-6 text-center">
-        <p className="text-gray-400 text-sm">Loading cast database...</p>
+      <div className="card-glamour p-8 text-center">
+        <p className="text-gray-500">Loading the drama...</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedShow('all')}
-          className={`px-2 py-1 text-xs rounded ${selectedShow === 'all' ? 'bg-drama-red text-white' : 'bg-white/10 text-gray-400'}`}
-        >
-          All Shows
-        </button>
-        {SHOWS.map(show => (
+      {/* Search & Filters */}
+      <div className="card-glamour p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search cast members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white/50 border border-blush-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blush-300"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
           <button
-            key={show.id}
-            onClick={() => setSelectedShow(show.id)}
-            className={`px-2 py-1 text-xs rounded ${
-              selectedShow === show.id ? 'text-white' : 'text-gray-400 hover:text-white'
+            onClick={() => setSelectedShow('all')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+              selectedShow === 'all' 
+                ? 'bg-blush-400 text-white shadow-glamour' 
+                : 'bg-white/50 text-gray-600 hover:bg-white'
             }`}
-            style={{ 
-              backgroundColor: selectedShow === show.id ? show.color : 'rgba(255,255,255,0.1)',
-              color: selectedShow === show.id ? (show.id === 'vpr' || show.id === 'southerncharm' ? 'white' : 'black') : undefined
-            }}
           >
-            {show.name.split(' ').slice(0, 2).join(' ')}
+            All Shows
           </button>
-        ))}
-      </div>
-      
-      {/* Sort */}
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-gray-500">Sort:</span>
-        {(['drama', 'name', 'show'] as const).map(opt => (
-          <button
-            key={opt}
-            onClick={() => setSortBy(opt)}
-            className={`capitalize ${sortBy === opt ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-
-      {/* Cast Grid */}
-      <div className="bg-drama-gray rounded-lg p-4">
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {filteredCast.map(member => (
+          {SHOWS.map(show => (
             <button
-              key={member.id}
-              onClick={() => setSelected(selected === member.id ? null : member.id)}
-              className={`relative aspect-square rounded-lg overflow-hidden transition transform hover:scale-105 ${
-                selected === member.id ? 'ring-2 ring-drama-red' : ''
+              key={show.id}
+              onClick={() => setSelectedShow(show.id)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                selectedShow === show.id 
+                  ? 'text-white shadow-md' 
+                  : 'bg-white/50 text-gray-600 hover:bg-white'
               }`}
+              style={selectedShow === show.id ? { backgroundColor: show.color } : {}}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-              <div className="absolute bottom-1 left-1 right-1">
-                <p className="text-[10px] font-semibold text-white truncate leading-tight">{member.name.split(' ')[0]}</p>
-                <p className="text-[8px] text-gray-400 truncate">{member.show.split(' ').slice(0, 2).join(' ')}</p>
-              </div>
-              {member.dramaScore >= 8 && (
-                <div className="absolute top-1 right-1 w-2 h-2 bg-drama-red rounded-full animate-pulse" />
-              )}
+              {show.name}
             </button>
           ))}
         </div>
         
-        {/* Selected Cast Detail */}
+        <div className="flex items-center gap-2 text-xs">
+          <Filter className="w-3 h-3 text-gray-400" />
+          <span className="text-gray-500">Sort:</span>
+          {(['drama', 'name'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => setSortBy(opt)}
+              className={`capitalize px-2 py-1 rounded transition-colors ${
+                sortBy === opt ? 'bg-blush-100 text-blush-600' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {opt === 'drama' ? '🔥 Drama Score' : 'A-Z'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Cast Grid */}
+      <div className="card-glamour p-5">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 mb-4">
+          {filteredCast.map(member => {
+            const isVerified = VERIFIED_HANDLES[member.id]
+            const isFav = favorites.has(member.id)
+            return (
+              <button
+                key={member.id}
+                onClick={() => setSelected(selected === member.id ? null : member.id)}
+                className={`relative group ${selected === member.id ? 'ring-2 ring-blush-400 ring-offset-2' : ''}`}
+              >
+                <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-blush-100 to-champagne-100 shadow-soft group-hover:shadow-glamour transition-all group-hover:scale-105">
+                  {/* Placeholder Avatar with Initials */}
+                  <div className="w-full h-full flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-charcoal-600">
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                    {member.dramaScore >= 8 && (
+                      <span className="absolute top-1 right-1 text-xs">🔥</span>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-1 text-[10px] font-medium text-charcoal-700 text-center truncate">
+                  {member.name.split(' ')[0]}
+                </p>
+                {isVerified && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <span className="text-[8px] text-white">✓</span>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        
+        {/* Selected Detail View */}
         {selected && (
-          <div className="border-t border-white/10 pt-4">
+          <div className="border-t border-blush-100 pt-4 animate-fade-in">
             {(() => {
               const member = cast.find(c => c.id === selected)
               if (!member) return null
+              const xHandle = VERIFIED_HANDLES[member.id]
+              const isFav = favorites.has(member.id)
+              
               return (
-                <div>
-                  <div className="flex items-start gap-3 mb-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={member.image} alt={member.name} className="w-16 h-16 rounded-lg object-cover" />
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    {/* Large Avatar */}
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blush-200 to-champagne-200 flex items-center justify-center text-2xl font-bold text-charcoal-700 shadow-glamour">
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white">{member.name}</h3>
-                      <p className="text-xs text-gray-400">{member.show}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {member.xHandle && (
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-serif text-xl font-bold text-charcoal-900">{member.name}</h3>
+                        {xHandle && (
+                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-[10px] text-white font-bold">✓</span>
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => toggleFavorite(member.id)}
+                          className={`p-1 rounded-full transition-colors ${isFav ? 'text-blush-500' : 'text-gray-300 hover:text-blush-300'}`}
+                        >
+                          <Heart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500">{member.show}</p>
+                      
+                      {/* Social Links */}
+                      <div className="flex gap-2 mt-2">
+                        {xHandle && (
                           <a 
-                            href={`https://x.com/${member.xHandle}`} 
-                            target="_blank" 
+                            href={`https://x.com/${xHandle}`}
+                            target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-400 hover:underline"
+                            className="flex items-center gap-1 px-3 py-1 bg-black text-white text-xs rounded-full hover:bg-gray-800 transition-colors"
                           >
-                            @{member.xHandle}
+                            <span className="font-bold">𝕏</span> @{xHandle}
                           </a>
                         )}
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                          member.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                          member.status === 'recurring' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {member.status}
-                        </span>
+                        {member.instagram && (
+                          <a 
+                            href={`https://instagram.com/${member.instagram}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs rounded-full hover:opacity-90 transition-opacity"
+                          >
+                            IG @{member.instagram}
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-gray-400">Drama Score:</span>
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                  {/* Drama Score */}
+                  <div className="bg-gradient-to-r from-blush-50 to-champagne-50 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-charcoal-700 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4 text-blush-500" />
+                        Drama Score
+                      </span>
+                      <span className="text-2xl font-bold text-blush-500">{member.dramaScore}/10</span>
+                    </div>
+                    <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-yellow-500 to-drama-red"
+                        className="h-full bg-gradient-to-r from-blush-300 via-blush-400 to-rose-gold rounded-full transition-all duration-500"
                         style={{ width: `${member.dramaScore * 10}%` }}
                       />
                     </div>
-                    <span className="text-sm font-bold text-drama-red">{member.dramaScore}/10</span>
                   </div>
                   
+                  {/* Relationships */}
                   {member.relationships.length > 0 && (
-                    <div className="text-xs">
-                      <p className="text-gray-400 mb-1">Relationships:</p>
-                      <ul className="space-y-1">
+                    <div>
+                      <h4 className="text-sm font-semibold text-charcoal-700 mb-2 flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        Relationships
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
                         {member.relationships.map((rel, i) => {
                           const target = cast.find(c => c.id === rel.targetId)
                           if (!target) return null
                           return (
-                            <li key={i} className="flex items-center gap-2">
+                            <button
+                              key={i}
+                              onClick={() => setSelected(target.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-xs"
+                            >
                               <span className={`w-2 h-2 rounded-full ${
-                                rel.type === 'dating' ? 'bg-pink-500' :
-                                rel.type === 'engaged' ? 'bg-purple-500' :
-                                rel.type === 'married' ? 'bg-blue-500' :
-                                rel.type === 'ex' ? 'bg-red-500' :
-                                rel.type === 'feud' ? 'bg-orange-500' :
-                                rel.type === 'frenemies' ? 'bg-yellow-500' :
-                                'bg-green-500'
+                                rel.type === 'dating' || rel.type === 'engaged' || rel.type === 'married' ? 'bg-pink-400' :
+                                rel.type === 'ex' ? 'bg-red-400' :
+                                rel.type === 'feud' ? 'bg-orange-400' :
+                                rel.type === 'frenemies' ? 'bg-yellow-400' :
+                                'bg-green-400'
                               }`} />
-                              <span className="text-gray-300 capitalize">{rel.type}</span>
-                              <span className="text-white">{target.name}</span>
-                              {rel.since && <span className="text-gray-500">(since {rel.since})</span>}
-                            </li>
+                              <span className="capitalize text-gray-500">{rel.type}</span>
+                              <span className="font-medium text-charcoal-700">{target.name}</span>
+                            </button>
                           )
                         })}
-                      </ul>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -178,9 +267,10 @@ export function CastTracker() {
         )}
         
         {!selected && (
-          <p className="text-center text-gray-500 text-xs py-2">
-            {filteredCast.length} cast members • Click for details
-          </p>
+          <div className="text-center py-4 text-gray-500">
+            <p className="text-sm">{filteredCast.length} cast members</p>
+            <p className="text-xs">Tap a photo to see details</p>
+          </div>
         )}
       </div>
     </div>
