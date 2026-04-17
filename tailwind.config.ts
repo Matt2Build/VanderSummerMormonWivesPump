@@ -48,9 +48,9 @@ const config: Config = {
         'mormon-gold': '#FFD700',
       },
       fontFamily: {
-        'serif': ['Playfair Display', 'Georgia', 'serif'],
+        'serif': ['"Playfair Display"', 'Georgia', 'serif'],
         'sans': ['Inter', 'system-ui', 'sans-serif'],
-        'script': ['Dancing Script', 'cursive'],
+        'script': ['"Dancing Script"', 'cursive'],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
