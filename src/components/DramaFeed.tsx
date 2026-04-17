@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { FEED_POSTS } from '@/lib/data'
 
 interface Post {
   id: string
@@ -18,14 +19,9 @@ export function DramaFeed() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch real data from X API
-    fetch('/api/feed')
-      .then(res => res.json())
-      .then(data => {
-        setPosts(data.posts || [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    // Use static data (in production, fetch from X API)
+    setPosts(FEED_POSTS)
+    setLoading(false)
   }, [])
 
   if (loading) {

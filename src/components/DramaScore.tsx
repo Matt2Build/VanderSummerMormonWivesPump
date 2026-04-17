@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { DRAMA_SCORES } from '@/lib/data'
 
 interface ScoreEntry {
   castMemberId: string
@@ -15,9 +16,7 @@ export function DramaScore() {
   const [scores, setScores] = useState<ScoreEntry[]>([])
 
   useEffect(() => {
-    fetch('/api/drama-scores')
-      .then(res => res.json())
-      .then(data => setScores(data.scores || []))
+    setScores(DRAMA_SCORES)
   }, [])
 
   if (scores.length === 0) {

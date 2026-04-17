@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { CAST_DB } from '@/lib/data'
 
 interface CastMember {
   id: string
@@ -19,9 +20,7 @@ export function CastTracker() {
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/cast')
-      .then(res => res.json())
-      .then(data => setCast(data.cast || []))
+    setCast(CAST_DB)
   }, [])
 
   if (cast.length === 0) {

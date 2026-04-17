@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PREDICTIONS, LEADERBOARD } from '@/lib/data'
 
 interface Prediction {
   id: string
@@ -26,12 +27,8 @@ export function PredictionPools() {
   const [activeTab, setActiveTab] = useState<'open' | 'leaderboard'>('open')
 
   useEffect(() => {
-    fetch('/api/predictions')
-      .then(res => res.json())
-      .then(data => {
-        setPredictions(data.predictions || [])
-        setLeaderboard(data.leaderboard || [])
-      })
+    setPredictions(PREDICTIONS)
+    setLeaderboard(LEADERBOARD)
   }, [])
 
   const handleVote = (predictionId: string, vote: 'yes' | 'no') => {
