@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, Filter, Download, Calendar, User } from 'lucide-react'
+import { Search, Filter, ExternalLink, Calendar, User, Link2 } from 'lucide-react'
 
 interface Receipt {
   id: string
@@ -12,6 +12,7 @@ interface Receipt {
   show: string
   type: 'screenshot' | 'video' | 'text' | 'legal'
   source: string
+  sourceUrl?: string
   receipts: number
   likes: number
   saved?: boolean
@@ -27,6 +28,7 @@ const RECEIPTS: Receipt[] = [
     show: 'RHOBH',
     type: 'screenshot',
     source: 'Production Leak',
+    sourceUrl: 'https://reddit.com/r/bravorealhousewives',
     receipts: 12,
     likes: 42800
   },
@@ -39,6 +41,7 @@ const RECEIPTS: Receipt[] = [
     show: 'Summer House',
     type: 'legal',
     source: 'Court Records',
+    sourceUrl: 'https://www.nycourts.gov',
     receipts: 8,
     likes: 32100
   },
@@ -51,6 +54,7 @@ const RECEIPTS: Receipt[] = [
     show: 'Vanderpump Rules',
     type: 'screenshot',
     source: 'Studio Leak',
+    sourceUrl: 'https://reddit.com/r/vanderpumprules',
     receipts: 15,
     likes: 56700
   },
@@ -63,6 +67,7 @@ const RECEIPTS: Receipt[] = [
     show: 'Secret Lives of Mormon Wives',
     type: 'legal',
     source: 'Agency Document',
+    sourceUrl: 'https://variety.com',
     receipts: 6,
     likes: 18900
   },
@@ -75,6 +80,7 @@ const RECEIPTS: Receipt[] = [
     show: 'Southern Charm',
     type: 'video',
     source: 'Audience Member',
+    sourceUrl: 'https://tiktok.com',
     receipts: 23,
     likes: 45000
   },
@@ -185,10 +191,18 @@ export function ReceiptVault() {
                 </span>
                 <span className="text-[10px] text-gray-400">{receipt.show}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors">
-                  <Download className="w-4 h-4 text-gray-400" />
-                </button>
+              <div className="flex items-center gap-1">
+                {receipt.sourceUrl && (
+                  <a 
+                    href={receipt.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-full hover:bg-blush-100 text-gray-400 hover:text-blush-500 transition-colors"
+                    title="View Source"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
                 <button 
                   onClick={() => toggleSave(receipt.id)}
                   className={`p-1.5 rounded-full transition-colors ${saved.has(receipt.id) ? 'bg-blush-100 text-blush-500' : 'hover:bg-gray-100 text-gray-400'}`}
@@ -198,8 +212,21 @@ export function ReceiptVault() {
               </div>
             </div>
             
-            <h3 className="font-serif text-lg font-bold text-charcoal-900 mb-1">{receipt.title}</h3>
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{receipt.content}</p>
+            <h3 className="font-serif text-lg font-bold text-charcoal-900 mb-1 flex items-center gap-2">
+              {receipt.title}
+              {receipt.sourceUrl && (
+                <a 
+                  href={receipt.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-normal text-blush-400 hover:text-blush-600 flex items-center gap-1"
+                >
+                  <Link2 className="w-3 h-3" />
+                  View
+                </a>
+              )}
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">{receipt.content}</p>
             
             {/* Cast Tags */}
             <div className="flex flex-wrap gap-1 mb-3">

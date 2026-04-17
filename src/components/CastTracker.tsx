@@ -3,13 +3,24 @@
 import { useEffect, useState, useMemo } from 'react'
 import { CAST_DB, SHOWS, CastMember } from '@/lib/castDatabase'
 import { VERIFIED_HANDLES } from '@/lib/verifiedHandles'
-import { Heart, Link2, TrendingUp, Users, X, Filter, Search } from 'lucide-react'
+import { Heart, ExternalLink, TrendingUp, Search, Filter, X, Shield } from 'lucide-react'
+
+const getAvatarColor = (name: string) => {
+  const colors = [
+    'from-rose-300 to-pink-400',
+    'from-purple-300 to-indigo-400',
+    'from-blue-300 to-cyan-400',
+    'from-teal-300 to-emerald-400',
+    'from-amber-300 to-orange-400',
+  ]
+  return colors[name.charCodeAt(0) % colors.length]
+}
 
 export function CastTracker() {
   const [cast, setCast] = useState<CastMember[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedShow, setSelectedShow] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'drama' | 'name' | 'followers'>('drama')
+  const [sortBy, setSortBy] = useState<'drama' | 'name'>('drama')
   const [searchQuery, setSearchQuery] = useState('')
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
 
@@ -17,7 +28,8 @@ export function CastTracker() {
     setCast(CAST_DB)
   }, [])
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
     const newFavs = new Set(favorites)
     if (newFavs.has(id)) newFavs.delete(id)
     else newFavs.add(id)
@@ -25,14 +37,8 @@ export function CastTracker() {
   }
 
   const filteredCast = useMemo(() => {
-    let filtered = cast
+    let filtered = selectedShow === 'all' ? cast : cast.filter(c => c.showId === selectedShow)
     
-    // Filter by show
-    if (selectedShow !== 'all') {
-      filtered = filtered.filter(c => c.showId === selectedShow)
-    }
-    
-    // Filter by search
     if (searchQuery) {
       filtered = filtered.filter(c => 
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,60 +46,48 @@ export function CastTracker() {
       )
     }
     
-    // Sort
     return [...filtered].sort((a, b) => {
       if (sortBy === 'drama') return b.dramaScore - a.dramaScore
-      if (sortBy === 'name') return a.name.localeCompare(b.name)
-      return 0
+      return a.name.localeCompare(b.name)
     })
   }, [cast, selectedShow, searchQuery, sortBy])
 
-  if (cast.length === 0) {
-    return (
-      <div className="card-glamour p-8 text-center">
-        <p className="text-gray-500">Loading the drama...</p>
-      </div>
-    )
-  }
+  if (cast.length === 0) return <div className="card-glamour p-8 text-center"><p className="text-gray-500">Loading...</p></div>
 
   return (
     <div className="space-y-4">
-      {/* Search & Filters */}
+      {/* Filters */}
       <div className="card-glamour p-4 space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search cast members..."
+            placeholder="Find cast member..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/50 border border-blush-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blush-300"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/70 border border-blush-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blush-300"
           />
         </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => setSelectedShow('all')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-              selectedShow === 'all' 
-                ? 'bg-blush-400 text-white shadow-glamour' 
-                : 'bg-white/50 text-gray-600 hover:bg-white'
+            className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all ${
+              selectedShow === 'all' ? 'bg-blush-400 text-white' : 'bg-white/50 text-gray-600'
             }`}
           >
-            All Shows
+            All ({cast.length})
           </button>
           {SHOWS.map(show => (
             <button
               key={show.id}
               onClick={() => setSelectedShow(show.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                selectedShow === show.id 
-                  ? 'text-white shadow-md' 
-                  : 'bg-white/50 text-gray-600 hover:bg-white'
+              className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all ${
+                selectedShow === show.id ? 'text-white' : 'bg-white/50 text-gray-600'
               }`}
               style={selectedShow === show.id ? { backgroundColor: show.color } : {}}
             >
-              {show.name}
+              {show.name.split(' ')[0]} ({cast.filter(c => c.showId === show.id).length})
             </button>
           ))}
         </div>
@@ -101,178 +95,142 @@ export function CastTracker() {
         <div className="flex items-center gap-2 text-xs">
           <Filter className="w-3 h-3 text-gray-400" />
           <span className="text-gray-500">Sort:</span>
-          {(['drama', 'name'] as const).map(opt => (
-            <button
-              key={opt}
-              onClick={() => setSortBy(opt)}
-              className={`capitalize px-2 py-1 rounded transition-colors ${
-                sortBy === opt ? 'bg-blush-100 text-blush-600' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {opt === 'drama' ? '🔥 Drama Score' : 'A-Z'}
-            </button>
-          ))}
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="bg-transparent border-none text-charcoal-700 font-medium text-xs focus:outline-none cursor-pointer"
+          >
+            <option value="drama">🔥 Drama Score</option>
+            <option value="name">A-Z</option>
+          </select>
         </div>
       </div>
 
-      {/* Cast Grid */}
-      <div className="card-glamour p-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 mb-4">
-          {filteredCast.map(member => {
-            const isVerified = VERIFIED_HANDLES[member.id]
-            const isFav = favorites.has(member.id)
-            return (
-              <button
-                key={member.id}
-                onClick={() => setSelected(selected === member.id ? null : member.id)}
-                className={`relative group ${selected === member.id ? 'ring-2 ring-blush-400 ring-offset-2' : ''}`}
-              >
-                <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-blush-100 to-champagne-100 shadow-soft group-hover:shadow-glamour transition-all group-hover:scale-105">
-                  {/* Placeholder Avatar with Initials */}
-                  <div className="w-full h-full flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-charcoal-600">
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                    {member.dramaScore >= 8 && (
-                      <span className="absolute top-1 right-1 text-xs">🔥</span>
-                    )}
+      {/* Grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {filteredCast.map(member => {
+          const xHandle = VERIFIED_HANDLES[member.id]
+          const isFav = favorites.has(member.id)
+          const show = SHOWS.find(s => s.id === member.showId)
+          
+          return (
+            <button
+              key={member.id}
+              onClick={() => setSelected(selected === member.id ? null : member.id)}
+              className="relative group text-left"
+            >
+              <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br shadow-soft group-hover:shadow-glamour transition-all">
+                <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(member.name)} flex flex-col items-center justify-center relative`}>
+                  <span className="text-3xl font-bold text-white">
+                    {member.name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                  
+                  {xHandle && (
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                      <Shield className="w-3 h-3 text-blue-500" />
+                    </div>
+                  )}
+                  
+                  {member.dramaScore >= 8 && (
+                    <div className="absolute top-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      🔥 {member.dramaScore}
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={(e) => toggleFavorite(member.id, e)}
+                    className={`absolute bottom-2 right-2 p-1.5 rounded-full transition-all ${isFav ? 'bg-red-500 text-white' : 'bg-white/30 text-white'}`}
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
+                  </button>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                    <p className="text-white font-semibold text-[10px] truncate">{member.name}</p>
+                    <p className="text-white/70 text-[9px] truncate">{show?.name}</p>
                   </div>
                 </div>
-                <p className="mt-1 text-[10px] font-medium text-charcoal-700 text-center truncate">
-                  {member.name.split(' ')[0]}
-                </p>
-                {isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                    <span className="text-[8px] text-white">✓</span>
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        
-        {/* Selected Detail View */}
-        {selected && (
-          <div className="border-t border-blush-100 pt-4 animate-fade-in">
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      
+      {/* Detail Modal */}
+      {selected && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[80vh] overflow-y-auto">
             {(() => {
               const member = cast.find(c => c.id === selected)
               if (!member) return null
               const xHandle = VERIFIED_HANDLES[member.id]
+              const show = SHOWS.find(s => s.id === member.showId)
               const isFav = favorites.has(member.id)
               
               return (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4">
-                    {/* Large Avatar */}
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blush-200 to-champagne-200 flex items-center justify-center text-2xl font-bold text-charcoal-700 shadow-glamour">
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                <div>
+                  <div className={`h-28 bg-gradient-to-br ${getAvatarColor(member.name)} relative`}>
+                    <button onClick={() => setSelected(null)} className="absolute top-3 right-3 p-2 bg-white/20 rounded-full text-white">
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute -bottom-8 left-4 w-16 h-16 rounded-xl bg-white p-1 shadow-lg">
+                      <div className={`w-full h-full rounded-lg bg-gradient-to-br ${getAvatarColor(member.name)} flex items-center justify-center`}>
+                        <span className="text-xl font-bold text-white">{member.name.charAt(0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-10 px-4 pb-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-serif text-xl font-bold text-charcoal-900">{member.name}</h3>
+                        <span className="text-xs px-2 py-0.5 rounded text-white" style={{ backgroundColor: show?.color }}>{show?.name}</span>
+                      </div>
+                      <button onClick={(e) => toggleFavorite(member.id, e)} className={`p-2 rounded-full ${isFav ? 'bg-red-100 text-red-500' : 'bg-gray-100'}`}>
+                        <Heart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
+                      </button>
                     </div>
                     
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-serif text-xl font-bold text-charcoal-900">{member.name}</h3>
-                        {xHandle && (
-                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-[10px] text-white font-bold">✓</span>
-                          </div>
-                        )}
-                        <button 
-                          onClick={() => toggleFavorite(member.id)}
-                          className={`p-1 rounded-full transition-colors ${isFav ? 'text-blush-500' : 'text-gray-300 hover:text-blush-300'}`}
-                        >
-                          <Heart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
-                        </button>
+                    <div className="flex gap-2 mb-4">
+                      {xHandle && (
+                        <a href={`https://x.com/${xHandle}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-black text-white text-xs rounded-lg">
+                          𝕏 @{xHandle} <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                    
+                    <div className="bg-blush-50 rounded-xl p-3 mb-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm flex items-center gap-1"><TrendingUp className="w-4 h-4 text-blush-500" /> Drama Score</span>
+                        <span className="text-xl font-bold text-blush-500">{member.dramaScore}/10</span>
                       </div>
-                      <p className="text-sm text-gray-500">{member.show}</p>
-                      
-                      {/* Social Links */}
-                      <div className="flex gap-2 mt-2">
-                        {xHandle && (
-                          <a 
-                            href={`https://x.com/${xHandle}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 px-3 py-1 bg-black text-white text-xs rounded-full hover:bg-gray-800 transition-colors"
-                          >
-                            <span className="font-bold">𝕏</span> @{xHandle}
-                          </a>
-                        )}
-                        {member.instagram && (
-                          <a 
-                            href={`https://instagram.com/${member.instagram}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs rounded-full hover:opacity-90 transition-opacity"
-                          >
-                            IG @{member.instagram}
-                          </a>
-                        )}
+                      <div className="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-blush-400 rounded-full" style={{ width: `${member.dramaScore * 10}%` }} />
                       </div>
                     </div>
+                    
+                    {member.relationships.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Relationships</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {member.relationships.map((rel, i) => {
+                            const target = cast.find(c => c.id === rel.targetId)
+                            if (!target) return null
+                            return (
+                              <button key={i} onClick={() => setSelected(target.id)} className="px-3 py-1.5 bg-white rounded-full shadow-sm text-xs">
+                                <span className="capitalize text-gray-500">{rel.type}</span> <span className="font-medium">{target.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {/* Drama Score */}
-                  <div className="bg-gradient-to-r from-blush-50 to-champagne-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-charcoal-700 flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4 text-blush-500" />
-                        Drama Score
-                      </span>
-                      <span className="text-2xl font-bold text-blush-500">{member.dramaScore}/10</span>
-                    </div>
-                    <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-blush-300 via-blush-400 to-rose-gold rounded-full transition-all duration-500"
-                        style={{ width: `${member.dramaScore * 10}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Relationships */}
-                  {member.relationships.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-charcoal-700 mb-2 flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        Relationships
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {member.relationships.map((rel, i) => {
-                          const target = cast.find(c => c.id === rel.targetId)
-                          if (!target) return null
-                          return (
-                            <button
-                              key={i}
-                              onClick={() => setSelected(target.id)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-xs"
-                            >
-                              <span className={`w-2 h-2 rounded-full ${
-                                rel.type === 'dating' || rel.type === 'engaged' || rel.type === 'married' ? 'bg-pink-400' :
-                                rel.type === 'ex' ? 'bg-red-400' :
-                                rel.type === 'feud' ? 'bg-orange-400' :
-                                rel.type === 'frenemies' ? 'bg-yellow-400' :
-                                'bg-green-400'
-                              }`} />
-                              <span className="capitalize text-gray-500">{rel.type}</span>
-                              <span className="font-medium text-charcoal-700">{target.name}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )
             })()}
           </div>
-        )}
-        
-        {!selected && (
-          <div className="text-center py-4 text-gray-500">
-            <p className="text-sm">{filteredCast.length} cast members</p>
-            <p className="text-xs">Tap a photo to see details</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
